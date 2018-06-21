@@ -1,26 +1,38 @@
 {
   "name": "powerbi-visuals-calendarvisual",
-  "version": "1.0.1",
+  "version": "1.0.10",
   "description": "Customize how you visualize day-to-day data with this easy to use Custom Calendar",
   "author": {
     "name": "Akvelon Inc",
     "email": "pbisupport@akvelon.com"
   },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akvelon/PowerBI-Custom-Calendar.git"
+  },
   "scripts": {
-    "postinstall": "pbiviz update 1.7.0",
+    "postinstall": "pbiviz update 1.11.0",
     "pbiviz": "pbiviz",
     "start": "pbiviz start",
-    "package": "pbiviz package"
+    "package": "pbiviz package",
+    "cert": "pbiviz --create-cert"
   },
-  "dependencies": {
+  "devDependencies": {
     "@types/d3": "3.5.36",
-    "d3": "3.5.5",
-    "jquery": "3.2.1",
-    "powerbi-visuals-tools": "1.7.0",
+    "@types/jquery": "^2.0.46",
+    "@types/lodash": "4.14.52",
+    "lodash": "4.16.2",
+    "powerbi-visuals-tools": "1.11.2",
     "powerbi-visuals-utils-chartutils": "^1.2.0",
     "powerbi-visuals-utils-colorutils": "^1.0.0",
     "powerbi-visuals-utils-dataviewutils": "1.2.0",
     "powerbi-visuals-utils-svgutils": "^1.1.0",
-    "powerbi-visuals-utils-tooltiputils": "^1.0.0"
+    "powerbi-visuals-utils-tooltiputils": "^1.0.0",
+    "tslint": "^4.4.2",
+    "typescript": "2.1.4"
+  },
+  "dependencies": {
+    "jquery": "^3.3.1"
   }
 }

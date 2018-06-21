@@ -1,37 +1,28 @@
 {
   "visual": {
-    "name": "calendarVisual",
+    "name": "customCalendar",
     "displayName": "Custom Calendar by Akvelon",
-    "guid": "calendarVisual5E37BB8CB2CB427ABE4F9EAAE66C5223",
-    "visualClassName": "Visual",
-    "version": "1.0.9",
+    "guid": "customCalendar5E37BB8CB2CB427ABE4F9EAAE66C5223",
+    "visualClassName": "CustomCalendar",
+    "version": "1.0.10",
     "description": "Customize how you visualize day-to-day data with this easy to use Custom Calendar",
     "supportUrl": "http://akvelon.com/feedback",
-    "gitHubUrl": ""
+    "gitHubUrl": "https://github.com/akvelon/PowerBI-Custom-Calendar"
   },
-  "assets": {
-    "icon": "assets/icon.png"
-  },
-  "resources": [{
-    "resourceId": "rId0",
-    "sourceType": 5,
-    "file": "resources/calendarVisual725E5ABA05ED456D899D7648C61A60F4.pbiviz.json"
-  }],
-  "metadata": {
-    "pbivizjson": {
-      "resourceId": "rId0"
-    }
-  },
-  "apiVersion": "1.7.0",
+  "apiVersion": "1.11.0",
   "author": {
     "name": "Akvelon Inc",
     "email": "pbisupport@akvelon.com"
   },
+  "assets": {
+    "icon": "assets/icon.png"
+  },
   "externalJS": [
-    "node_modules/powerbi-visuals-utils-dataviewutils/lib/index.js",
+    "node_modules/jquery/dist/jquery.min.js",
     "node_modules/d3/d3.min.js",
-	  "node_modules/globalize/lib/globalize.js",
+    "node_modules/globalize/lib/globalize.js",
     "node_modules/globalize/lib/cultures/globalize.culture.en-US.js",
+    "node_modules/powerbi-visuals-utils-dataviewutils/lib/index.js",
     "node_modules/powerbi-visuals-utils-typeutils/lib/index.js",
     "node_modules/powerbi-visuals-utils-svgutils/lib/index.js",
     "node_modules/powerbi-visuals-utils-formattingutils/lib/index.js",
@@ -40,8 +31,7 @@
     "node_modules/powerbi-visuals-utils-colorutils/lib/index.js",
     "node_modules/powerbi-visuals-utils-tooltiputils/lib/index.js"
   ],
-  "style": "style/visual.less",
+  "style": "style/customCalendar.less",
   "capabilities": "capabilities.json",
-  "dependencies": "dependencies.json",
   "stringResources": []
 }
