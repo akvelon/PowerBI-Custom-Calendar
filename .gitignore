@@ -1,0 +1,8 @@
+node_modules
+.vscode
+build
+.idea
+.tmp
+.vs
+dist
+.api
