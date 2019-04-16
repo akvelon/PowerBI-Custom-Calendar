@@ -1,8 +1,8 @@
 {
   "visual": {
-    "name": "customCalendar",
+    "name": "calendarVisual",
     "displayName": "Custom Calendar by Akvelon",
-    "guid": "customCalendar5E37BB8CB2CB427ABE4F9EAAE66C5223",
+    "guid": "calendarVisual5E37BB8CB2CB427ABE4F9EAAE66C5223",
     "visualClassName": "CustomCalendar",
     "version": "1.0.11",
     "description": "Customize how you visualize day-to-day data with this easy to use Custom Calendar",
