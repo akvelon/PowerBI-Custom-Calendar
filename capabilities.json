@@ -13,7 +13,7 @@
     {
       "displayName": "Tooltips",
       "name": "tooltips",
-      "kind": "Grouping"
+      "kind": "Measure"
     }
   ],
   "dataViewMappings": [

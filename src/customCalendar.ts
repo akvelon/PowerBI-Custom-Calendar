@@ -35,7 +35,6 @@ module powerbi.extensibility.visual {
 
   // tooltip
   import ITooltipServiceWrapper = powerbi.extensibility.utils.tooltip.ITooltipServiceWrapper;
-  import TooltipEnabledDataPoint = powerbi.extensibility.utils.tooltip.TooltipEnabledDataPoint;
   import TooltipEventArgs = powerbi.extensibility.utils.tooltip.TooltipEventArgs;
   import createTooltipServiceWrapper = powerbi.extensibility.utils.tooltip.createTooltipServiceWrapper;
 
@@ -54,11 +53,12 @@ module powerbi.extensibility.visual {
     date: string;
     defaultDate: string;
     metric: string;
-    hours: number;
+    hours: any;
     color: string;
     id: string;
     selectionId: powerbi.visuals.ISelectionId;
     index: number;
+    metadataColumn: DataViewMetadataColumn;
   }
 
   interface Metrics {
@@ -111,7 +111,6 @@ module powerbi.extensibility.visual {
     private static isMultipleSelected: boolean = false;
 
     private startDate: Date;
-    private monthsNumber: number;
     private categoryFormatString: string;
 
     constructor(options: VisualConstructorOptions) {
@@ -127,21 +126,21 @@ module powerbi.extensibility.visual {
         (ids: any[]) => {
           if (ids.length == 0)
             return;
-          
-          let cells: HTMLElement[] = this.getCellBySelectionIds(ids);
-          this.clearSelectedCells();
-          this.selectCell(d3.select(cells[0]));
+
+          let cells: HTMLElement[] = CustomCalendar.getCellBySelectionIds(ids);
+          CustomCalendar.clearSelectedCells();
+          CustomCalendar.selectCell(d3.select(cells[0]));
 
           if (cells.length > 1) {
             for (let i = 1; i < cells.length; i++)
-              this.selectCell(d3.select(cells[i]), true);
+              CustomCalendar.selectCell(d3.select(cells[i]), true);
           }
         });
 
       const visual: d3.Selection<any> = d3.select(options.element);
       const selectionManagerField: ISelectionManager = this.selectionManager;
 
-      visual.on("click", function(d) {
+      visual.on("click", function() {
         if ((d3.event as MouseEvent).toElement.id === "") {
           if (CustomCalendar.selectedCell.length == 0)
             return;
@@ -173,7 +172,7 @@ module powerbi.extensibility.visual {
       this.visibleGroupContainer = svg.append("div").attr("class", "visibleGroup");
     }
 
-    private getCellBySelectionIds(ids: any[]): HTMLElement[] {
+    private static getCellBySelectionIds(ids: any[]): HTMLElement[] {
       let cKeysArray: string[] = [];
 
       for (let i = 0; i < ids.length; i++) {
@@ -196,7 +195,7 @@ module powerbi.extensibility.visual {
       return cellArray;
     }
 
-    private clearSelectedCells(): void {
+    private static clearSelectedCells(): void {
       if (CustomCalendar.selectedCell.length == 0)
         return;
       else {
@@ -219,7 +218,7 @@ module powerbi.extensibility.visual {
 
       const selectionManagerLegend: ISelectionManager = this.selectionManager;
       if (selectionManagerLegend.getSelectionIds().length == 0) {
-        this.clearSelectedCells();
+        CustomCalendar.clearSelectedCells();
       }
 
       this.currentViewport = {
@@ -267,8 +266,8 @@ module powerbi.extensibility.visual {
         dataPoints: <ICalendarDataPoint[]>[]
       };
       const calendarSettings: CalendarSettings = this.settings = CustomCalendar.parseSettings(options.dataViews[0]);
-      
-      this.setStartDate(calendarSettings);
+
+      this.setStartDate();
 
       if (!dataViews
         || !dataViews[0]
@@ -314,8 +313,9 @@ module powerbi.extensibility.visual {
             this.categoryFormatString = categoryFormatString;
             const value = valueFormatter.format(category.values[j], categoryFormatString);
             const date: Date = <Date>category.values[j];
-            const stringDate: string = this.convertDateToString(date);
-            const hours: number = <number>groupedValue.values[j];
+            const stringDate: string = CustomCalendar.convertDateToString(date);
+            const hours: any = <number>groupedValue.values[j];
+            const metadataColumn: DataViewMetadataColumn = groupedValue.source;
 
             if (hours !== null && hours !== undefined) {
               dataPoints.data.push({
@@ -324,7 +324,8 @@ module powerbi.extensibility.visual {
                 hours: hours,
                 color: color,
                 value: groupedValue,
-                index: groupedValue.source.index
+                index: groupedValue.source.index,
+                metadataColumn: metadataColumn
               });
             }
           }
@@ -373,6 +374,14 @@ module powerbi.extensibility.visual {
         return 0;
       });
 
+      const datesArr = [];
+      for (let i = 0; i < dataPoints.data.length - 1; i++) {
+        if (dataPoints.data[i].date !== dataPoints.data[i + 1].date) {
+          datesArr.push(dataPoints.data[i].date);
+        }
+      }
+      datesArr.push(dataPoints.data[dataPoints.data.length - 1].date);
+
       for (let j = 0; j < dataPoints.data.length; j++) {
         this.dataPoints.push({
           date: dataPoints.data[j].date,
@@ -382,10 +391,12 @@ module powerbi.extensibility.visual {
           color: dataPoints.data[j].color,
           id: "#a" + dataPoints.data[j].date,
           selectionId: host.createSelectionIdBuilder()
-            .withCategory(dataViews[0].categorical.categories[0], j)
+            .withCategory(dataViews[0].categorical.categories[0],
+            datesArr.indexOf(dataPoints.data[j].date))
             .withMeasure(dataPoints.data[j].date)
             .createSelectionId(),
-          index: dataPoints.data[j].index
+          index: dataPoints.data[j].index,
+          metadataColumn: dataPoints.data[j].metadataColumn
         });
       }
 
@@ -393,26 +404,23 @@ module powerbi.extensibility.visual {
         metrics: calendarMetrics
       };
 
-      const allColumns: string[] = [];
-      for (let k = 0; k < dataViews[0].metadata.columns.length; k++) {
-        allColumns.push(dataViews[0].metadata.columns[k].displayName);
+      let tooltipColumns: string[] = [];
+
+      for (let i = 0; i < categorical.values.length; i++) {
+        if(categorical.values[i].source.roles['tooltips']) {
+          tooltipColumns.push(categorical.values[i].source.displayName);
+        }
       }
 
-      allColumns.splice(allColumns.indexOf(categorical.categories[0].source.displayName), 1);
-
-      for (let k = 0; k < categorical.values.length; k++) {
-        allColumns.splice(allColumns.indexOf(categorical.values[k].source.displayName), 1);
-      }
-
-      this.tooltips = allColumns;
+      this.tooltips = tooltipColumns.sort();
 
       return {
         settings: calendarSettings,
         dataPoints: this.dataPoints
       };
     }
-        
-    private GetTooltip(value: any): VisualTooltipDataItem[] {
+
+    private static GetTooltip(value: any): VisualTooltipDataItem[] {
       if (value) {
         return value;
       }
@@ -498,7 +506,7 @@ module powerbi.extensibility.visual {
       for (let monthCount = 0; monthCount < monthsNumber; monthCount++) {
         const monthIndex: number = (startMonth + monthCount) % this.months.length;
         const month: string = this.months[monthIndex];
-        const year: number = this.getYear(startDate, monthCount);
+        const year: number = CustomCalendar.getYear(startDate, monthCount);
 
         this.monthContainer = this.visibleGroupContainer.append("svg").attr("class", "month")
           .attr("width", monthSize + 15)
@@ -542,7 +550,7 @@ module powerbi.extensibility.visual {
 
       for (let dataPoint of this.calendarViewModel.dataPoints) {
         const currentDate: Date = new Date(dataPoint.date);
-        if (currentDate >= startDate && currentDate < endDate) {
+        if (currentDate >= startDate && currentDate < endDate && dataPoint.metadataColumn.roles['metrics']) {
           if (drawnMetrics.indexOf(dataPoint.metric) === -1) {
             drawnMetrics.push(dataPoint.metric);
           }
@@ -561,7 +569,7 @@ module powerbi.extensibility.visual {
 
     }
 
-    private getYear(startDate: Date, monthCount: number): number {
+    private static getYear(startDate: Date, monthCount: number): number {
       const date: string = startDate.toDateString();
       const newDate: Date = new Date(date);
 
@@ -578,17 +586,16 @@ module powerbi.extensibility.visual {
       return startDate;
     }
 
-    private setStartDate(calendarSettings: CalendarSettings): void {
+    private setStartDate(): void {
       const calendarType: number = this.settings.calendarSettings.calendarType;
       //Type is Fixed
       if (calendarType === 0) {
         const startDateSettings: string = this.settings.calendarSettings.startDate;
-        this.startDate = this.getValidateDate(startDateSettings);
+        this.startDate = CustomCalendar.getValidateDate(startDateSettings);
       }
       //Type is Relative
       else {
         const numOfPreviousMonths: number = this.settings.calendarSettings.numOfPreviousMonths;
-        const numOfFollowingMonths: number = this.settings.calendarSettings.numOfFollowingMonths;
         let startDate = new Date();
         startDate.setMonth(startDate.getMonth() - numOfPreviousMonths);
         this.startDate = startDate;
@@ -597,13 +604,13 @@ module powerbi.extensibility.visual {
       this.startDate.setDate(1);
     }
 
-    private getValidateDate(date: string): Date {
+    private static getValidateDate(date: string): Date {
       if ((date.search(/^((0?[1-9]|1[012])[- /.](0?[1-9]|[12][0-9]|3[01])[- /.](19|20)[0-9]{2})*$/) === 0) && (date != "")) {
         const month: number = Number(date.slice(0, date.indexOf("/")));
         const day: number = Number(date.slice(date.indexOf("/") + 1, -5));
         const year: number = Number(date.slice(-4));
         const currentDate = new Date(year, month - 1);
-        if (day <= this.getDaysInMonth(currentDate)) {
+        if (day <= CustomCalendar.getDaysInMonth(currentDate)) {
           currentDate.setDate(day);
           return currentDate;
         }
@@ -611,9 +618,8 @@ module powerbi.extensibility.visual {
       return new Date();
     }
 
-    private getDaysInMonth(date: Date): number {
+    private static getDaysInMonth(date: Date): number {
       return 33 - new Date(date.getFullYear(), date.getMonth(), 33).getDate();
-
     }
 
     private getMonthsNumber(): number {
@@ -621,20 +627,9 @@ module powerbi.extensibility.visual {
       const numOfMonths: number = this.settings.calendarSettings.numOfMonths;
       const numOfPreviousMonths: number = this.settings.calendarSettings.numOfPreviousMonths;
       const numOfFollowingMonths: number = this.settings.calendarSettings.numOfFollowingMonths;
-      const monthsNumber: number = calendarType === 0 ? numOfMonths :
+      return calendarType === 0 ? numOfMonths :
         calendarType === 1 ? numOfPreviousMonths + numOfFollowingMonths :
           12;
-
-      return monthsNumber;
-    }
-
-    private getDateStringFormat(): string {
-      const currentDate: Date = new Date();
-      const dateFormat: string = (currentDate.getMonth() + 1) + "/"
-        + (currentDate.getDate()) + "/"
-        + (currentDate.getFullYear());
-
-      return dateFormat;
     }
 
     private drawMonthCells(monthSize: number, month: string, year: number,
@@ -673,7 +668,7 @@ module powerbi.extensibility.visual {
       }
       newFirstDay = newWeek.indexOf(this.weekDays[firstDay]);
       numOfDays = new Date(year, monthIndex + 1, 0).getDate();
-        
+
       for (let cellRow = 0; cellRow < cellRowNumber; cellRow++) {
         for (let cellMonthCount = 0; cellMonthCount < 7; cellMonthCount++) {
           const currentX: number = 1 + cellSize * cellMonthCount;
@@ -717,15 +712,15 @@ module powerbi.extensibility.visual {
               cell.data(this.GetTooltipsDataCell(this.GetMetricByDate(currentDate), currentDate));
               this.tooltipServiceWrapper.addTooltip(
                 cell,
-                (tooltipEvent: TooltipEventArgs<number>) => this.GetTooltip(tooltipEvent.data),
-                (tooltipEvent: TooltipEventArgs<number>) => null);
+                (tooltipEvent: TooltipEventArgs<number>) => CustomCalendar.GetTooltip(tooltipEvent.data),
+                null);
 
               //Adding label tooltip here
               label.data(this.GetTooltipsDataCell(this.GetMetricByDate(currentDate), currentDate));
               this.tooltipServiceWrapper.addTooltip(
                 label,
-                (tooltipEvent: TooltipEventArgs<number>) => this.GetTooltip(tooltipEvent.data),
-                (tooltipEvent: TooltipEventArgs<number>) => null);
+                (tooltipEvent: TooltipEventArgs<number>) => CustomCalendar.GetTooltip(tooltipEvent.data),
+                null);
             }
 
             dayNumber++;
@@ -735,7 +730,7 @@ module powerbi.extensibility.visual {
         }
       }
 
-      const monthMetrics: ICalendarDataPoint[] = this.drawMetrics(cellsContainer, monthIndex + 1, year, monthCells, monthCount);
+      this.drawMetrics(cellsContainer, monthIndex + 1, year, monthCells, monthCount);
     }
 
     private drawMetrics(cellsContainer: d3.Selection<any>, monthNumber: number,
@@ -750,7 +745,7 @@ module powerbi.extensibility.visual {
         if (dataPoints[i].date != null) {
           const dataPoint: ICalendarDataPoint = dataPoints[i];
           const renderedDate: Date = new Date(dataPoint.date);
-          const renderedDateString: string = this.convertDateToString(renderedDate);
+          const renderedDateString: string = CustomCalendar.convertDateToString(renderedDate);
           const monthString: string = String(monthNumber) + "/";
 
           if ((renderedDateString.indexOf(monthString) === 0)
@@ -766,7 +761,7 @@ module powerbi.extensibility.visual {
         const startDay: number = this.getStartDate().getDate();
         let currentDay: number;
         for (let i = 0; i < sameMonthDataPoints.length; i++) {
-          currentDay = this.getDayFromDataStr(sameMonthDataPoints[i].date);
+          currentDay = CustomCalendar.getDayFromDataStr(sameMonthDataPoints[i].date);
           if (currentDay >= startDay) {
             sameMonthDataPoints = sameMonthDataPoints.slice(i);
             break;
@@ -801,7 +796,7 @@ module powerbi.extensibility.visual {
 
           let id: string;
           for (let j = 0; j < dataPointsToDraw.length; j++) {
-            const date: string = this.convertDateToString(new Date(dataPointsToDraw[j].date))
+            const date: string = CustomCalendar.convertDateToString(new Date(dataPointsToDraw[j].date))
               .replace("/", "_");
             const dateFormat: string = date.replace("/", "_");
             id = "#a" + dateFormat;
@@ -817,37 +812,42 @@ module powerbi.extensibility.visual {
             }
           });
 
-          const sortedDataPoints: ICalendarDataPoint[] = dataPointsToDraw;
+          let sortedMetrics: ICalendarDataPoint[] = [];
 
-          sortedDaysMetrics.push(sortedDataPoints);
-          
+          for (let k = 0; k < dataPointsToDraw.length; k++) {
+            if (dataPointsToDraw[k].metadataColumn.roles['metrics']) {
+              sortedMetrics.push(dataPointsToDraw[k]);
+            }
+          }
+
+          sortedDaysMetrics.push(dataPointsToDraw);
+
           let previousYCoord: number = cellSize;
-          for (let j = 0; j < sortedDataPoints.length; j++) {
-
+          for (let j = 0; j < sortedMetrics.length; j++) {
             //If the metric is zero, then simply add a click handler to the cell. Otherwise, we draw the metric and add the click handler to both the cell and the metric
-            if (sortedDataPoints[j].hours === 0) {
+            if (sortedMetrics[j].hours === 0) {
               for (let i = 0; i < monthCells.length; i++) {
                 const monthCell: any = monthCells[i][0][0];
                 const cell: d3.Selection<any> = d3.select(monthCell.previousSibling);
                 const label: d3.Selection<any> = d3.select(monthCell);
                 const id: string = "#" + cell.attr("id");
 
-                if (id === sortedDataPoints[j].id) {
-                  cell.on("click", function (d) {
-                    self.select(cell, [sortedDataPoints[0]]);
+                if (id === sortedMetrics[j].id) {
+                  cell.on("click", function () {
+                    self.select(cell, [sortedMetrics[0]]);
                   });
-                  label.on("click", function (d) {
-                    self.select(cell, sortedDataPoints);
+                  label.on("click", function () {
+                    self.select(cell, [sortedMetrics[0]]);
                   });
                 }
               }
             } else {
-              const metricCoeff: number = this.getMetricHeight(sortedDataPoints, j);
+              const metricCoeff: number = CustomCalendar.getMetricHeight(sortedMetrics, j);
               const width: number = cellSize - 2;
               const height: number = (cellSize - (cellSize / 2.3)) * metricCoeff;
               const xCoord: number = Number(d3.select(id).attr("x")) + 1;
               const yCoord: number = Number(d3.select(id).attr("y")) + previousYCoord - height - 1;
-              const metricFormat: string = sortedDataPoints[j].metric.replace(" ", "");
+              const metricFormat: string = sortedMetrics[j].metric.replace(" ", "");
 
               const cellId = id.replace('#', '');
               const cellMetrics: d3.Selection<any> = cellsContainer.append("rect")
@@ -858,7 +858,7 @@ module powerbi.extensibility.visual {
                 .attr("height", height)
                 .attr("x", xCoord)
                 .attr("y", yCoord)
-                .attr("fill", sortedDataPoints[j].color);
+                .attr("fill", sortedMetrics[j].color);
 
               for (let i = 0; i < monthCells.length; i++) {
                 const monthCell: any = monthCells[i][0][0];
@@ -866,25 +866,24 @@ module powerbi.extensibility.visual {
                 const label: d3.Selection<any> = d3.select(monthCell);
                 const id: string = "#" + cell.attr("id");
 
-                if (id === sortedDataPoints[j].id) {
-                  cell.on("click", function (d) {
-                    self.select(cell, [sortedDataPoints[0]]);
+                if (id === sortedMetrics[j].id) {
+                  cell.on("click", function () {
+                    self.select(cell, [sortedMetrics[0]]);
                   });
-                  label.on("click", function (d) {
-                    self.select(cell, sortedDataPoints);
+                  label.on("click", function () {
+                    self.select(cell, [sortedMetrics[0]]);
                   });
-                  cellMetrics.on("click", function (d) {
-                    self.select(cell, [sortedDataPoints[j]]);
+                  cellMetrics.on("click", function () {
+                    self.select(cell, [sortedMetrics[j]]);
                   });
                 }
               }
-
               //Adding tooltip here
-              cellMetrics.data(this.GetTooltipsDataMetric(sortedDataPoints, sortedDataPoints[j]));
+              cellMetrics.data(this.GetTooltipsDataMetric(dataPointsToDraw, sortedMetrics[j]));
               this.tooltipServiceWrapper.addTooltip(
                 cellMetrics,
-                (tooltipEvent: TooltipEventArgs<number>) => this.GetTooltip(tooltipEvent.data),
-                (tooltipEvent: TooltipEventArgs<number>) => null);
+                (tooltipEvent: TooltipEventArgs<number>) => CustomCalendar.GetTooltip(tooltipEvent.data),
+                null);
 
               previousYCoord = previousYCoord - height;
             }
@@ -899,29 +898,25 @@ module powerbi.extensibility.visual {
     }
 
     private GetTooltipsDataCell(allPoints: ICalendarDataPoint[], currentDate: Date): ITooltipDataPoint[] {
-      const dataPoints: ICalendarDataPoint[] = this.GetDataPointsWithoutZeroMetric(allPoints);
+      const dataPoints: ICalendarDataPoint[] = CustomCalendar.GetDataPointsWithoutZeroMetric(allPoints);
       let currentTooltipDataPoint: ITooltipDataPoint[] = [];
       let resultTooltipData: any[] = [];
       let tooltips: string[] = this.tooltips.slice();
       let indexInPoints: number = 0;
-      
-      if (tooltips.length === 0) {
+
+      if (dataPoints.length === 0) {
         let tooltipData: any = {};
         tooltipData.header = valueFormatter.format(currentDate, this.categoryFormatString);
         currentTooltipDataPoint.push(tooltipData);
       } else {
-        //We add the metrics from the array of tooltips to the tooltip
         for (let i = 0; i < tooltips.length; i++) {
           let tooltipData: any = {};
           tooltipData.header = valueFormatter.format(currentDate, this.categoryFormatString);
           tooltipData.color = this.GetColorByMetricName(tooltips[i]);
           tooltipData.displayName = tooltips[i];
-          //If there is a value at the bottom, then we use it. Otherwise, zero
-          indexInPoints = this.GetIndexMetricInPointsArray(tooltips[i], dataPoints);
+          indexInPoints = CustomCalendar.GetIndexMetricInPointsArray(tooltips[i], dataPoints);
           if (indexInPoints >= 0) {
-            tooltipData.value = dataPoints[indexInPoints].hours.toString();
-          } else {
-            tooltipData.value = "0";
+            tooltipData.value = CustomCalendar.tooltipValue(dataPoints[indexInPoints].metadataColumn, dataPoints[indexInPoints].hours);
           }
           currentTooltipDataPoint.push(tooltipData);
         }
@@ -932,7 +927,7 @@ module powerbi.extensibility.visual {
     }
 
     private GetTooltipsDataMetric(allPoints: ICalendarDataPoint[], point: ICalendarDataPoint): ITooltipDataPoint[] {
-      const dataPoints: ICalendarDataPoint[] = this.GetDataPointsWithoutZeroMetric(allPoints);
+      const dataPoints: ICalendarDataPoint[] = CustomCalendar.GetDataPointsWithoutZeroMetric(allPoints);
       let currentTooltipDataPoint: ITooltipDataPoint[] = [];
       let tooltips: string[] = this.tooltips.slice();
       let resultTooltipData: any[] = [];
@@ -944,7 +939,7 @@ module powerbi.extensibility.visual {
       tooltipData.header = point.defaultDate;
       tooltipData.value = point.hours.toString();
       currentTooltipDataPoint.push(tooltipData);
-      
+
       //Remove the name of an already added metric from the array tooltips
       if (tooltips.indexOf(point.metric) >= 0) {
         tooltips.splice(tooltips.indexOf(point.metric), 1);
@@ -956,19 +951,17 @@ module powerbi.extensibility.visual {
         tooltipData.header = point.defaultDate;
         tooltipData.color = this.GetColorByMetricName(tooltips[i]);
         tooltipData.displayName = tooltips[i];
-        //If there is a value at the bottom, then we use it. Otherwise, zero
-        let indexInPoints: number = this.GetIndexMetricInPointsArray(tooltips[i], dataPoints);
+
+        let indexInPoints: number = CustomCalendar.GetIndexMetricInPointsArray(tooltips[i], dataPoints);
         if (indexInPoints >= 0) {
-          tooltipData.value = dataPoints[indexInPoints].hours.toString();
-        } else {
-          tooltipData.value = "0";
+          tooltipData.value = CustomCalendar.tooltipValue(dataPoints[indexInPoints].metadataColumn, dataPoints[indexInPoints].hours);
         }
         currentTooltipDataPoint.push(tooltipData);
       }
       //Sort the metrics in the order of the display on the tooltip. First specified by the user, then the rest
       currentTooltipDataPoint.sort((first, second) => {
         let sortMetricArr: string[] = this.GetSortMetricArray();
-        if (this.GetIndexMetricInArray(first.displayName, sortMetricArr) < this.GetIndexMetricInArray(second.displayName, sortMetricArr)) {
+        if (CustomCalendar.GetIndexMetricInArray(first.displayName, sortMetricArr) < CustomCalendar.GetIndexMetricInArray(second.displayName, sortMetricArr)) {
           return -1;
         } else {
           return 1;
@@ -979,7 +972,27 @@ module powerbi.extensibility.visual {
       return resultTooltipData;
     }
 
-    private GetDataPointsWithoutZeroMetric(allPoints: ICalendarDataPoint[]): ICalendarDataPoint[] {
+    private static tooltipValue(metadataColumn: DataViewMetadataColumn, value: PrimitiveValue): any {
+      return CustomCalendar.getFormattedValue(metadataColumn, value)
+    }
+
+    private static getFormattedValue(column: DataViewMetadataColumn, value: any) {
+      let formatString: string = CustomCalendar.getFormatStringFromColumn(column);
+
+      return valueFormatter.format(value, formatString);
+    }
+
+    private static getFormatStringFromColumn(column: DataViewMetadataColumn): string {
+      if (column) {
+        let formatString: string = valueFormatter.getFormatStringByColumn(column, false);
+
+        return formatString || column.format;
+      }
+
+      return null;
+    }
+
+    private static GetDataPointsWithoutZeroMetric(allPoints: ICalendarDataPoint[]): ICalendarDataPoint[] {
       let dataPoints: ICalendarDataPoint[] = allPoints.slice();
       let i = 0;
       while (i < dataPoints.length) {
@@ -993,13 +1006,13 @@ module powerbi.extensibility.visual {
     }
 
     private select(cell: d3.Selection<any>, sortedDataPoints: ICalendarDataPoint[]) {
-      if(this.selectCell(cell))
+      if(CustomCalendar.selectCell(cell))
         this.selectMetrics(sortedDataPoints);
       else 
         this.selectionManager.clear();
     }
 
-    private selectCell(cell: d3.Selection<any>, check: boolean = false): boolean {
+    private static selectCell(cell: d3.Selection<any>, check: boolean = false): boolean {
       let multipleSelection: boolean = check || ((d3.event as MouseEvent) ? (d3.event as MouseEvent).ctrlKey : false);
       const cellFill: string = cell.attr("fill");
       
@@ -1061,18 +1074,21 @@ module powerbi.extensibility.visual {
       }
     }
 
-    private getMetricHeight(dataPoints: ICalendarDataPoint[], dataPointNumber): number {
+    private static getMetricHeight(dataPoints: ICalendarDataPoint[], dataPointNumber): number {
       const metric: ICalendarDataPoint = dataPoints[dataPointNumber];
-      const metricsSum: number = this.getMetricsSum(dataPoints, metric.id);
-      const metricHeight: number = metric.hours / metricsSum;
+      const metricsSum: number = CustomCalendar.getMetricsSum(dataPoints, metric.id);
 
-      return metricHeight;
+      return CustomCalendar.isNumeric(metric.hours) ? (metric.hours / metricsSum) : 0;
     }
 
-    private getMetricsSum(dataPoints: ICalendarDataPoint[], metricId: string): number {
+    private static isNumeric(value: any) : boolean {
+      return !isNaN(parseFloat(value)) && isFinite(value);
+    }
+
+    private static getMetricsSum(dataPoints: ICalendarDataPoint[], metricId: string): number {
       let metricsSum: number = 0;
       for (let i = 0; i < dataPoints.length; i++) {
-        if (dataPoints[i].id === metricId) {
+        if (dataPoints[i].id === metricId && CustomCalendar.isNumeric(dataPoints[i].hours)) {
           metricsSum = metricsSum + dataPoints[i].hours;
         }
       }
@@ -1092,15 +1108,14 @@ module powerbi.extensibility.visual {
       return false;
     }
 
-    private convertDateToString(date: Date): string {
+    private static convertDateToString(date: Date): string {
       if (date == null) {
         return null;
       }
-      const renderedDateString: string = (date.getMonth() + 1) + "/"
+
+      return (date.getMonth() + 1) + "/"
         + (date.getDate()) + "/"
         + (date.getFullYear());
-
-      return renderedDateString;
     }
 
     private drawDaysLabels(monthSize: number): void {
@@ -1173,7 +1188,7 @@ module powerbi.extensibility.visual {
       return countWeek;
     }
 
-    private getDayFromDataStr(dataStr: string): number {
+    private static getDayFromDataStr(dataStr: string): number {
       let dayStr: string;
       dayStr = dataStr.slice(0, -5);
       dayStr = dayStr.slice(dayStr.indexOf("/") + 1);
@@ -1222,7 +1237,7 @@ module powerbi.extensibility.visual {
       return currentDataPoints;
     }
 
-    private GetIndexMetricInArray(name: string, arr: any[]): number {
+    private static GetIndexMetricInArray(name: string, arr: any[]): number {
       let index: number = -1;
       for (let i = 0; i < arr.length; i++) {
         if (name === arr[i]) {
@@ -1232,7 +1247,7 @@ module powerbi.extensibility.visual {
       return index;
     }
 
-    private GetIndexMetricInPointsArray(name: string, arr: ICalendarDataPoint[]): number {
+    private static GetIndexMetricInPointsArray(name: string, arr: ICalendarDataPoint[]): number {
       let index: number = -1;
       for (let i = 0; i < arr.length; i++) {
         if (name === arr[i].metric) {
