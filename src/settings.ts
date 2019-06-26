@@ -24,10 +24,13 @@
  *  THE SOFTWARE.
  */
 
-module powerbi.extensibility.visual {
-  import DataViewObjectsParser = powerbi.extensibility.utils.dataview.DataViewObjectsParser;
+import {
+    dataViewObjectsParser
+} from "powerbi-visuals-utils-dataviewutils";
 
-  export class CalendarAppearance {
+import DataViewObjectsParser = dataViewObjectsParser.DataViewObjectsParser;
+
+export class CalendarAppearance {
     public startDate: string = this.getDefaultStartDate();
     public numOfMonths: number = 12;
     public calendarType: number = 0;
@@ -42,30 +45,29 @@ module powerbi.extensibility.visual {
     public dayLabelsColor: string = "black";
 
     private getDefaultStartDate(): string {
-      let currentDate = new Date();
-      let startDate = (currentDate.getMonth() + 1) + "/"
-        + (currentDate.getDate()) + "/"
-        + (currentDate.getFullYear());
+        let currentDate = new Date();
+        let startDate = (currentDate.getMonth() + 1) + "/"
+            + (currentDate.getDate()) + "/"
+            + (currentDate.getFullYear());
 
-      return startDate;
+        return startDate;
     }
-  }
+}
 
-  export class MetricsAppearance {
+export class MetricsAppearance {
     public metricColor: string = "";
-  }
+}
 
-  export class LegendAppearance {
+export class LegendAppearance {
     public show: boolean = false;
     public legendLabelColor: string = "black";
     public legendLabelFontSize: number = 10;
     public legendTitleShow: boolean = false;
     public legendTitleName: string = "Metrics";
-  }
+}
 
-  export class CalendarSettings extends DataViewObjectsParser {
+export class CalendarSettings extends DataViewObjectsParser {
     public calendarSettings: CalendarAppearance = new CalendarAppearance();
     public metricsSettings: MetricsAppearance = new MetricsAppearance();
     public legendSettings: LegendAppearance = new LegendAppearance();
-  }
 }
