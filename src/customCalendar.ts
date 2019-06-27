@@ -32,6 +32,7 @@ import ISelectionId = powerbi.visuals.ISelectionId;
 import ISelectionManager = powerbi.extensibility.ISelectionManager;
 import IViewport = powerbi.IViewport;
 import IVisual = powerbi.extensibility.visual.IVisual;
+import IVisualEventService = powerbi.extensibility.IVisualEventService;
 import IVisualHost = powerbi.extensibility.visual.IVisualHost;
 import DataView = powerbi.DataView;
 import DataViewCategorical = powerbi.DataViewCategorical;
@@ -57,11 +58,7 @@ import { svg } from "d3-fetch";
 
 import {
     ScaleBand,
-    ScaleOrdinal,
-    ScaleLinear,
-    scaleBand,
-    scaleOrdinal,
-    scaleLinear
+    scaleBand
 } from "d3-scale";
 
 import {
@@ -90,42 +87,41 @@ import valueFormatter = ValueFormatter.valueFormatter;
 
 import "./../style/visual.less";
 import { CalendarSettings } from "./settings";
-import {Calendar} from "powerbi-visuals-utils-formattingutils/lib/src/formattingService/formattingService";
 
 export type Selection = d3.Selection<any, any, any, any>;
 
 interface ICalendarViewModel {
-  settings: CalendarSettings;
-  dataPoints: ICalendarDataPoint[];
+    settings: CalendarSettings;
+    dataPoints: ICalendarDataPoint[];
 }
 
 interface ICalendarDataPoint {
-  date: string;
-  defaultDate: string;
-  metric: string;
-  hours: any;
-  color: string;
-  id: string;
-  selectionId: ISelectionId;
-  index: number;
-  metadataColumn: DataViewMetadataColumn;
+    date: string;
+    defaultDate: string;
+    metric: string;
+    hours: any;
+    color: string;
+    id: string;
+    selectionId: ISelectionId;
+    index: number;
+    metadataColumn: DataViewMetadataColumn;
 }
 
 interface Metrics {
-  metrics: ICalendarMetric[];
+    metrics: ICalendarMetric[];
 }
 
 interface ICalendarMetric {
-  name: string;
-  color: string;
-  selectionId: ISelectionId;
+    name: string;
+    color: string;
+    selectionId: ISelectionId;
 }
 
 interface ITooltipDataPoint {
-  displayName: string;
-  value: string;
-  color: string;
-  header: string;
+    displayName: string;
+    value: string;
+    color: string;
+    header: string;
 }
 
 export class CustomCalendar implements IVisual {
@@ -134,6 +130,7 @@ export class CustomCalendar implements IVisual {
     private tooltipServiceWrapper: ITooltipServiceWrapper;
     private selectionManager: ISelectionManager;
     private currentViewport: IViewport;
+    private events: IVisualEventService;
 
     private settings: CalendarSettings;
     private calendarMetrics: Metrics;
@@ -169,6 +166,7 @@ export class CustomCalendar implements IVisual {
     private init(options: VisualConstructorOptions): void {
         const element: HTMLElement = options.element;
         this.host = options.host;
+        this.events = options.host.eventService;
         this.selectionManager = options.host.createSelectionManager();
         this.selectionManager.registerOnSelectCallback((ids: any[]) => {
             if (ids.length === 0) return;
@@ -178,8 +176,9 @@ export class CustomCalendar implements IVisual {
             CustomCalendar.selectCell(d3.select(cells[0]));
 
             if (cells.length > 1) {
-                for (let i = 1; i < cells.length; i++)
+                for (let i = 1; i < cells.length; i++) {
                     CustomCalendar.selectCell(d3.select(cells[i]), true);
+                }
             }
         });
 
@@ -252,6 +251,7 @@ export class CustomCalendar implements IVisual {
     }
 
     public update(options: VisualUpdateOptions) {
+        this.events.renderingStarted(options);
         this.visibleGroupContainer.selectAll(".month").remove();
         this.dataPoints = [];
         const width: number = options.viewport.width;
@@ -297,6 +297,8 @@ export class CustomCalendar implements IVisual {
                 }
             });
         });
+
+        this.events.renderingFinished(options);
     }
 
     private visualTransform(options: VisualUpdateOptions, host: IVisualHost): ICalendarViewModel {
