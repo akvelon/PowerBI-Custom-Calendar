@@ -24,10 +24,7 @@
  *  THE SOFTWARE.
  */
 
-import {
-    dataViewObjectsParser
-} from "powerbi-visuals-utils-dataviewutils";
-
+import { dataViewObjectsParser } from "powerbi-visuals-utils-dataviewutils";
 import DataViewObjectsParser = dataViewObjectsParser.DataViewObjectsParser;
 
 export class CalendarAppearance {
@@ -46,11 +43,10 @@ export class CalendarAppearance {
 
     private getDefaultStartDate(): string {
         let currentDate = new Date();
-        let startDate = (currentDate.getMonth() + 1) + "/"
+
+        return (currentDate.getMonth() + 1) + "/"
             + (currentDate.getDate()) + "/"
             + (currentDate.getFullYear());
-
-        return startDate;
     }
 }
 
