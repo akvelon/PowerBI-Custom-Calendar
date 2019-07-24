@@ -25,36 +25,34 @@
 */
 
 import * as d3 from "d3";
-import powerbi from "powerbi-visuals-api";
+import powerbiVisualsApi from "powerbi-visuals-api";
 
-import IColorPalette = powerbi.extensibility.IColorPalette;
-import ISelectionId = powerbi.visuals.ISelectionId;
-import ISelectionManager = powerbi.extensibility.ISelectionManager;
-import IViewport = powerbi.IViewport;
-import IVisual = powerbi.extensibility.visual.IVisual;
-import IVisualEventService = powerbi.extensibility.IVisualEventService;
-import IVisualHost = powerbi.extensibility.visual.IVisualHost;
-import DataView = powerbi.DataView;
-import DataViewCategorical = powerbi.DataViewCategorical;
-import DataViewCategoryColumn = powerbi.DataViewCategoryColumn;
-import DataViewMetadataColumn = powerbi.DataViewMetadataColumn;
-import DataViewObject = powerbi.DataViewObject;
-import DataViewObjects = powerbi.DataViewObjects;
-import DataViewValueColumn = powerbi.DataViewValueColumn;
-import EnumerateVisualObjectInstancesOptions = powerbi.EnumerateVisualObjectInstancesOptions;
-import PrimitiveValue = powerbi.PrimitiveValue;
-import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
-import VisualObjectInstance = powerbi.VisualObjectInstance;
-import VisualObjectInstanceEnumeration = powerbi.VisualObjectInstanceEnumeration;
-import VisualTooltipDataItem = powerbi.extensibility.VisualTooltipDataItem;
-import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
+import IColorPalette = powerbiVisualsApi.extensibility.IColorPalette;
+import ISelectionId = powerbiVisualsApi.visuals.ISelectionId;
+import ISelectionManager = powerbiVisualsApi.extensibility.ISelectionManager;
+import IViewport = powerbiVisualsApi.IViewport;
+import IVisual = powerbiVisualsApi.extensibility.visual.IVisual;
+import IVisualEventService = powerbiVisualsApi.extensibility.IVisualEventService;
+import IVisualHost = powerbiVisualsApi.extensibility.visual.IVisualHost;
+import DataView = powerbiVisualsApi.DataView;
+import DataViewCategorical = powerbiVisualsApi.DataViewCategorical;
+import DataViewCategoryColumn = powerbiVisualsApi.DataViewCategoryColumn;
+import DataViewMetadataColumn = powerbiVisualsApi.DataViewMetadataColumn;
+import DataViewObject = powerbiVisualsApi.DataViewObject;
+import DataViewObjects = powerbiVisualsApi.DataViewObjects;
+import DataViewValueColumn = powerbiVisualsApi.DataViewValueColumn;
+import EnumerateVisualObjectInstancesOptions = powerbiVisualsApi.EnumerateVisualObjectInstancesOptions;
+import PrimitiveValue = powerbiVisualsApi.PrimitiveValue;
+import VisualConstructorOptions = powerbiVisualsApi.extensibility.visual.VisualConstructorOptions;
+import VisualObjectInstance = powerbiVisualsApi.VisualObjectInstance;
+import VisualObjectInstanceEnumeration = powerbiVisualsApi.VisualObjectInstanceEnumeration;
+import VisualTooltipDataItem = powerbiVisualsApi.extensibility.VisualTooltipDataItem;
+import VisualUpdateOptions = powerbiVisualsApi.extensibility.visual.VisualUpdateOptions;
 
 import {
     Axis,
     axisBottom
 } from "d3-axis";
-
-import { svg } from "d3-fetch";
 
 import {
     ScaleBand,
@@ -78,15 +76,17 @@ import {
 } from "powerbi-visuals-utils-tooltiputils";
 
 import ILegend = legendInterfaces.ILegend;
-import ILegendData = legendInterfaces.LegendData;
+import LegendData = legendInterfaces.LegendData;
 import LegendPosition = legendInterfaces.LegendPosition;
 import createLegend = legend.createLegend;
 import legendProps = legendInterfaces.legendProps;
 
 import valueFormatter = ValueFormatter.valueFormatter;
 
-import "./../style/visual.less";
+/* tslint:disable:no-relative-imports */
+import "../style/visual.less";
 import { CalendarSettings } from "./settings";
+/* tslint:enable:no-relative-imports */
 
 export type Selection = d3.Selection<any, any, any, any>;
 
@@ -170,7 +170,6 @@ export class CustomCalendar implements IVisual {
         this.selectionManager = options.host.createSelectionManager();
         this.selectionManager.registerOnSelectCallback((ids: any[]) => {
             if (ids.length === 0) return;
-
             let cells: HTMLElement[] = CustomCalendar.getCellBySelectionIds(ids);
             CustomCalendar.clearSelectedCells();
             CustomCalendar.selectCell(d3.select(cells[0]));
@@ -185,8 +184,8 @@ export class CustomCalendar implements IVisual {
         const visual: Selection = d3.select(options.element);
         const selectionManagerField: ISelectionManager = this.selectionManager;
 
-        visual.on("click", function () {
-            if ((d3.event as MouseEvent).toElement.id === "") {
+        visual.on("click", () => {
+            if ((<MouseEvent>d3.event).toElement.id === "") {
                 if (CustomCalendar.selectedCell.length === 0) return;
                 else {
                     for (let i = 0; i < CustomCalendar.selectedCell.length; i++) {
@@ -254,15 +253,15 @@ export class CustomCalendar implements IVisual {
         this.events.renderingStarted(options);
         this.visibleGroupContainer.selectAll(".month").remove();
         this.dataPoints = [];
-        const width: number = options.viewport.width;
-        const height: number = options.viewport.height;
-
         this.calendarViewModel = this.visualTransform(options, this.host);
 
         const selectionManagerLegend: ISelectionManager = this.selectionManager;
         if (selectionManagerLegend.getSelectionIds().length === 0) {
             CustomCalendar.clearSelectedCells();
         }
+
+        const width: number = options.viewport.width;
+        const height: number = options.viewport.height;
 
         this.currentViewport = {
             width: Math.max(0, width),
@@ -281,13 +280,12 @@ export class CustomCalendar implements IVisual {
         const legends: Selection = d3.selectAll(".legendItem");
         const calendarMetrics: ICalendarMetric[] = this.calendarMetrics.metrics;
 
-        legends.on("click", function (d) {
+        legends.on("click", (d, i, legend) => {
             selectionManagerLegend.select(d.identity).then((ids: ISelectionId[]) => {
                 const selectedItemsNumber: number = selectionManagerLegend.getSelectionIds().length;
 
                 legends.attr('fill-opacity', ids.length > 0 ? '0.5' : '1');
-
-                d3.select(this).attr("fill-opacity", 1);
+                d3.select(legend[i]).attr("fill-opacity", 1);
 
                 for (const metric of calendarMetrics) {
                     const fillOpacityValue: number = metric.name !== d.label && selectedItemsNumber > 0 ? 0.3 : 1;
@@ -303,7 +301,6 @@ export class CustomCalendar implements IVisual {
 
     private visualTransform(options: VisualUpdateOptions, host: IVisualHost): ICalendarViewModel {
         let dataViews: DataView[] = options.dataViews;
-        const calendarMetrics: ICalendarMetric[] = [];
         const viewModel: ICalendarViewModel = {
             settings: <CalendarSettings>{},
             dataPoints: <ICalendarDataPoint[]>[]
@@ -328,10 +325,54 @@ export class CustomCalendar implements IVisual {
         });
 
         const categorical: DataViewCategorical = dataViews[0].categorical;
+        const dataPoints = this.getDataPoints(categorical, host);
+        CustomCalendar.sortDataPoints(dataPoints);
+
+        const datesArr = [];
+        for (let i = 0; i < dataPoints.data.length - 1; i++) {
+            if (dataPoints.data[i].date !== dataPoints.data[i + 1].date) {
+                datesArr.push(dataPoints.data[i].date);
+            }
+        }
+        datesArr.push(dataPoints.data[dataPoints.data.length - 1].date);
+
+        for (let j = 0; j < dataPoints.data.length; j++) {
+            this.dataPoints.push({
+                date: dataPoints.data[j].date,
+                defaultDate: dataPoints.data[j].defaultDate,
+                metric: dataPoints.data[j].metric,
+                hours: dataPoints.data[j].hours,
+                color: dataPoints.data[j].color,
+                id: "#a" + dataPoints.data[j].date,
+                selectionId: host.createSelectionIdBuilder()
+                    .withCategory(dataViews[0].categorical.categories[0], datesArr.indexOf(dataPoints.data[j].date))
+                    .withMeasure(dataPoints.data[j].date)
+                    .createSelectionId(),
+                index: dataPoints.data[j].index,
+                metadataColumn: dataPoints.data[j].metadataColumn
+            });
+        }
+
+        let tooltipColumns: string[] = [];
+        for (let i = 0; i < categorical.values.length; i++) {
+            if (categorical.values[i].source.roles['tooltips']) {
+                tooltipColumns.push(categorical.values[i].source.displayName);
+            }
+        }
+        this.tooltips = tooltipColumns.sort();
+
+        return {
+            settings: this.settings,
+            dataPoints: this.dataPoints
+        };
+    }
+
+    private getDataPoints(categorical, host): any {
         const category: DataViewCategoryColumn = categorical.categories[0];
         const dataPoints = {
             data: []
         };
+        const calendarMetrics: ICalendarMetric[] = [];
 
         let colorHelper: ColorHelper = new ColorHelper(
             host.colorPalette,
@@ -386,7 +427,15 @@ export class CustomCalendar implements IVisual {
             });
         }
 
-        dataPoints.data.sort(function (second, first) {
+        this.calendarMetrics = {
+            metrics: calendarMetrics
+        };
+
+        return dataPoints;
+    }
+
+    private static sortDataPoints(dataPoints) {
+        dataPoints.data.sort((second, first) => {
             if (first.date === null) {
                 return 1;
             } else if (second.date === null) {
@@ -416,52 +465,6 @@ export class CustomCalendar implements IVisual {
 
             return 0;
         });
-
-        const datesArr = [];
-        for (let i = 0; i < dataPoints.data.length - 1; i++) {
-            if (dataPoints.data[i].date !== dataPoints.data[i + 1].date) {
-                datesArr.push(dataPoints.data[i].date);
-            }
-        }
-
-        datesArr.push(dataPoints.data[dataPoints.data.length - 1].date);
-
-        for (let j = 0; j < dataPoints.data.length; j++) {
-            this.dataPoints.push({
-                date: dataPoints.data[j].date,
-                defaultDate: dataPoints.data[j].defaultDate,
-                metric: dataPoints.data[j].metric,
-                hours: dataPoints.data[j].hours,
-                color: dataPoints.data[j].color,
-                id: "#a" + dataPoints.data[j].date,
-                selectionId: host.createSelectionIdBuilder()
-                    .withCategory(dataViews[0].categorical.categories[0],
-                        datesArr.indexOf(dataPoints.data[j].date))
-                    .withMeasure(dataPoints.data[j].date)
-                    .createSelectionId(),
-                index: dataPoints.data[j].index,
-                metadataColumn: dataPoints.data[j].metadataColumn
-            });
-        }
-
-        this.calendarMetrics = {
-            metrics: calendarMetrics
-        };
-
-        let tooltipColumns: string[] = [];
-
-        for (let i = 0; i < categorical.values.length; i++) {
-            if (categorical.values[i].source.roles['tooltips']) {
-                tooltipColumns.push(categorical.values[i].source.displayName);
-            }
-        }
-
-        this.tooltips = tooltipColumns.sort();
-
-        return {
-            settings: this.settings,
-            dataPoints: this.dataPoints
-        };
     }
 
     private static getTooltip(value: any): VisualTooltipDataItem[] {
@@ -492,7 +495,7 @@ export class CustomCalendar implements IVisual {
             legendTitle = legendTitleName;
         }
 
-        const legendDataTorender: ILegendData = {
+        const legendDataToRender: LegendData = {
             fontSize: legendLabelFontSize,
             dataPoints: [],
             title: legendTitle,
@@ -502,7 +505,7 @@ export class CustomCalendar implements IVisual {
         for (let i = 0; i < this.calendarMetrics.metrics.length; i++) {
             const metric: ICalendarMetric = this.calendarMetrics.metrics[i];
 
-            legendDataTorender.dataPoints.push({
+            legendDataToRender.dataPoints.push({
                 label: metric.name,
                 color: metric.color,
                 selected: false,
@@ -515,15 +518,15 @@ export class CustomCalendar implements IVisual {
         const legendObjectProperties: DataViewObject = this.legendObjectProperties;
 
         if (legendObjectProperties) {
-            legendData.update(legendDataTorender, legendObjectProperties);
+            legendData.update(legendDataToRender, legendObjectProperties);
 
-            const position: string = legendObjectProperties[legendProps.position] as string;
+            const position: string = <string>legendObjectProperties[legendProps.position];
             if (position) {
                 this.legend.changeOrientation(LegendPosition[position]);
             }
         }
 
-        this.legend.drawLegend(legendDataTorender, this.currentViewport);
+        this.legend.drawLegend(legendDataToRender, this.currentViewport);
         legend.positionChartArea(this.rootElement, this.legend);
 
         this.rootElement.select('.legend').style('top', 0);
@@ -769,9 +772,7 @@ export class CustomCalendar implements IVisual {
     }
 
     private drawMetrics(cellsContainer: Selection, monthNumber: number,
-                        year: number, monthCells: any, monthCount: number): ICalendarDataPoint[] {
-        const cellSize: number = <number>this.settings.calendarSettings.cellSize;
-        const sortedDaysMetrics: any[] = [];
+                        year: number, monthCells: any, monthCount: number): void {
         let sameMonthDataPoints: ICalendarDataPoint[] = [];
         let dataPoints: ICalendarDataPoint[] = this.dataPoints;
         let index: number = 0;
@@ -781,10 +782,9 @@ export class CustomCalendar implements IVisual {
                 const dataPoint: ICalendarDataPoint = dataPoints[i];
                 const renderedDate: Date = new Date(dataPoint.date);
                 const renderedDateString: string = CustomCalendar.convertDateToString(renderedDate);
-                const monthString: string = String(monthNumber) + "/";
+                const month: string = String(monthNumber) + "/";
 
-                if ((renderedDateString.indexOf(monthString) === 0)
-                    && (renderedDateString.indexOf(String(year)) > -1)) {
+                if ((renderedDateString.indexOf(month) === 0) && (renderedDateString.indexOf(String(year)) > -1)) {
                     sameMonthDataPoints[index] = dataPoint;
                     index++;
                 }
@@ -793,9 +793,8 @@ export class CustomCalendar implements IVisual {
 
         if (monthCount === 0) {
             const startDay: number = this.getStartDate().getDate();
-            let currentDay: number;
             for (let i = 0; i < sameMonthDataPoints.length; i++) {
-                currentDay = CustomCalendar.getDayFromDataStr(sameMonthDataPoints[i].date);
+                const currentDay: number = CustomCalendar.getDayFromDataStr(sameMonthDataPoints[i].date);
                 if (currentDay >= startDay) {
                     sameMonthDataPoints = sameMonthDataPoints.slice(i);
                     break;
@@ -828,14 +827,14 @@ export class CustomCalendar implements IVisual {
                     dataPointsToDraw[j + 1] = sameDateDataPoints[j];
                 }
 
-                let id: string;
+                let dataPointId: string;
                 for (let j = 0; j < dataPointsToDraw.length; j++) {
                     const date: string = CustomCalendar.convertDateToString(new Date(dataPointsToDraw[j].date))
                         .replace("/", "_");
                     const dateFormat: string = date.replace("/", "_");
-                    id = "#a" + dateFormat;
+                    dataPointId = "#a" + dateFormat;
 
-                    dataPointsToDraw[j].id = id;
+                    dataPointsToDraw[j].id = dataPointId;
                 }
 
                 dataPointsToDraw.sort((first, second) => {
@@ -846,87 +845,87 @@ export class CustomCalendar implements IVisual {
                     }
                 });
 
-                let sortedMetrics: ICalendarDataPoint[] = [];
-
-                for (let k = 0; k < dataPointsToDraw.length; k++) {
-                    if (dataPointsToDraw[k].metadataColumn.roles['metrics']) {
-                        sortedMetrics.push(dataPointsToDraw[k]);
-                    }
-                }
-
-                sortedDaysMetrics.push(dataPointsToDraw);
-
-                let previousYCoord: number = cellSize;
-                for (let j = 0; j < sortedMetrics.length; j++) {
-                    if (sortedMetrics[j].hours === 0) {
-                        for (let i = 0; i < monthCells.length; i++) {
-                            const monthCell: any = monthCells[i][0][0];
-                            const cell: Selection = d3.select(monthCell.previousSibling);
-                            const label: Selection = d3.select(monthCell);
-                            const id: string = "#" + cell.attr("id");
-
-                            if (id === sortedMetrics[j].id) {
-                                cell.on("click", function () {
-                                    self.select(cell, [sortedMetrics[0]]);
-                                });
-                                label.on("click", function () {
-                                    self.select(cell, [sortedMetrics[0]]);
-                                });
-                            }
-                        }
-                    } else {
-                        const metricFactor: number = CustomCalendar.getMetricHeight(sortedMetrics, j);
-                        const width: number = cellSize - 2;
-                        const height: number = (cellSize - (cellSize / 2.3)) * metricFactor;
-                        const xCoord: number = Number(d3.select(id).attr("x")) + 1;
-                        const yCoord: number = Number(d3.select(id).attr("y")) + previousYCoord - height - 1;
-                        const metricFormat: string = sortedMetrics[j].metric.replace(" ", "");
-
-                        const cellId = id.replace('#', '');
-                        const cellMetrics: Selection = cellsContainer.append("rect")
-                            .attr("id", cellId)
-                            .attr("class", "metric " + metricFormat)
-                            .attr("fill-opacity", 1)
-                            .attr("width", width)
-                            .attr("height", height)
-                            .attr("x", xCoord)
-                            .attr("y", yCoord)
-                            .attr("fill", sortedMetrics[j].color);
-
-                        for (let i = 0; i < monthCells.length; i++) {
-                            const monthCell: any = monthCells[i][0][0];
-                            const cell: Selection = d3.select(monthCell.previousSibling);
-                            const label: Selection = d3.select(monthCell);
-                            const id: string = "#" + cell.attr("id");
-
-                            if (id === sortedMetrics[j].id) {
-                                cell.on("click", function () {
-                                    self.select(cell, [sortedMetrics[0]]);
-                                });
-                                label.on("click", function () {
-                                    self.select(cell, [sortedMetrics[0]]);
-                                });
-                                cellMetrics.on("click", function () {
-                                    self.select(cell, [sortedMetrics[j]]);
-                                });
-                            }
-                        }
-                        cellMetrics.data(this.getTooltipsDataMetric(dataPointsToDraw, sortedMetrics[j]));
-                        this.tooltipServiceWrapper.addTooltip(
-                            cellMetrics,
-                            (tooltipEvent: TooltipEventArgs<number>) => CustomCalendar.getTooltip(tooltipEvent.data),
-                            null);
-
-                        previousYCoord = previousYCoord - height;
-                    }
-                }
+                this.drawCellMetrics(self, cellsContainer, monthCells, dataPointId, dataPointsToDraw);
 
                 usedDates[usedDatesIndex] = sameMonthDataPoints[i].date;
                 usedDatesIndex++;
             }
         }
+    }
 
-        return sortedDaysMetrics;
+    private drawCellMetrics(self, cellsContainer, monthCells, dataPointId, dataPointsToDraw): void {
+        const cellSize: number = <number>this.settings.calendarSettings.cellSize;
+        let sortedMetrics: ICalendarDataPoint[] = [];
+        for (let k = 0; k < dataPointsToDraw.length; k++) {
+            if (dataPointsToDraw[k].metadataColumn.roles['metrics']) {
+                sortedMetrics.push(dataPointsToDraw[k]);
+            }
+        }
+
+        let previousYCoord: number = cellSize;
+        for (let j = 0; j < sortedMetrics.length; j++) {
+            if (sortedMetrics[j].hours === 0) {
+                for (let i = 0; i < monthCells.length; i++) {
+                    const monthCell: any = monthCells[i][0][0];
+                    const cell: Selection = d3.select(monthCell.previousSibling);
+                    const label: Selection = d3.select(monthCell);
+                    const id: string = "#" + cell.attr("id");
+
+                    if (id === sortedMetrics[j].id) {
+                        cell.on("click", () => {
+                            self.select(cell, [sortedMetrics[0]]);
+                        });
+                        label.on("click", () => {
+                            self.select(cell, [sortedMetrics[0]]);
+                        });
+                    }
+                }
+            } else {
+                const metricFactor: number = CustomCalendar.getMetricHeight(sortedMetrics, j);
+                const width: number = cellSize - 2;
+                const height: number = (cellSize - (cellSize / 2.3)) * metricFactor;
+                const xCoord: number = Number(d3.select(dataPointId).attr("x")) + 1;
+                const yCoord: number = Number(d3.select(dataPointId).attr("y")) + previousYCoord - height - 1;
+                const metricFormat: string = sortedMetrics[j].metric.replace(" ", "");
+
+                const cellId = dataPointId.replace('#', '');
+                const cellMetrics: Selection = cellsContainer.append("rect")
+                    .attr("id", cellId)
+                    .attr("class", "metric " + metricFormat)
+                    .attr("fill-opacity", 1)
+                    .attr("width", width)
+                    .attr("height", height)
+                    .attr("x", xCoord)
+                    .attr("y", yCoord)
+                    .attr("fill", sortedMetrics[j].color);
+
+                for (let i = 0; i < monthCells.length; i++) {
+                    const monthCell: any = monthCells[i][0][0];
+                    const cell: Selection = d3.select(monthCell.previousSibling);
+                    const label: Selection = d3.select(monthCell);
+                    const id: string = "#" + cell.attr("id");
+
+                    if (id === sortedMetrics[j].id) {
+                        cell.on("click", () => {
+                            self.select(cell, [sortedMetrics[0]]);
+                        });
+                        label.on("click", () => {
+                            self.select(cell, [sortedMetrics[0]]);
+                        });
+                        cellMetrics.on("click", () => {
+                            self.select(cell, [sortedMetrics[j]]);
+                        });
+                    }
+                }
+                cellMetrics.data(this.getTooltipsDataMetric(dataPointsToDraw, sortedMetrics[j]));
+                this.tooltipServiceWrapper.addTooltip(
+                    cellMetrics,
+                    (tooltipEvent: TooltipEventArgs<number>) => CustomCalendar.getTooltip(tooltipEvent.data),
+                    null);
+
+                previousYCoord = previousYCoord - height;
+            }
+        }
     }
 
     private getTooltipsDataCell(allPoints: ICalendarDataPoint[], currentDate: Date): ITooltipDataPoint[] {
@@ -1051,7 +1050,7 @@ export class CustomCalendar implements IVisual {
     }
 
     private static selectCell(cell: Selection, check: boolean = false): boolean {
-        let multipleSelection: boolean = check || ((d3.event as MouseEvent) ? (d3.event as MouseEvent).ctrlKey : false);
+        let multipleSelection: boolean = check || ((<MouseEvent>d3.event) ? (<MouseEvent>d3.event).ctrlKey : false);
         const cellFill: string = cell.attr("fill");
         if (multipleSelection) {
             let isAdded: boolean = false;
@@ -1320,117 +1319,138 @@ export class CustomCalendar implements IVisual {
      */
     public enumerateObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
         const objectName: string = options.objectName;
-        const objectEnumeration: VisualObjectInstance[] = [];
+        let objectEnumeration: VisualObjectInstance[] = [];
 
         switch (objectName) {
             case 'metricsSettings':
-                for (const metric of this.calendarMetrics.metrics) {
-                    objectEnumeration.push({
-                        objectName: objectName,
-                        displayName: metric.name,
-                        properties: {
-                            metricColor: {solid: {color: metric.color}}
-                        },
-                        selector: ColorHelper.normalizeSelector((metric.selectionId as ISelectionId).getSelector())
-                    });
-                }
+                objectEnumeration = this.getMetricsSettings(objectName);
                 break;
             case 'legendSettings':
-                objectEnumeration.push({
-                    objectName: objectName,
-                    displayName: "Legend",
-                    properties: {
-                        show: this.settings.legendSettings.show,
-                        legendLabelColor: this.settings.legendSettings.legendLabelColor,
-                        legendLabelFontSize: this.settings.legendSettings.legendLabelFontSize,
-                        legendTitleShow: this.settings.legendSettings.legendTitleShow,
-                        legendTitleName: this.settings.legendSettings.legendTitleName
-                    },
-                    validValues: {
-                        legendLabelFontSize: {
-                            numberRange: {
-                                min: 4,
-                                max: 30
-                            }
-                        }
-                    },
-                    selector: null
-                });
+                objectEnumeration = this.getLegendSettings(objectName);
                 break;
             case 'calendarSettings':
-                if (this.settings.calendarSettings.calendarType === 0) {
-                    objectEnumeration.push({
-                        objectName: objectName,
-                        displayName: "Calendar",
-                        properties: {
-                            calendarType: this.settings.calendarSettings.calendarType,
-                            startDate: this.settings.calendarSettings.startDate,
-                            numOfMonths: this.settings.calendarSettings.numOfMonths,
-                            firstDay: this.settings.calendarSettings.firstDay,
-                            cellSize: this.settings.calendarSettings.cellSize,
-                            cellBorderColor: this.settings.calendarSettings.cellBorderColor,
-                            calendarHeaderColor: this.settings.calendarSettings.calendarHeaderColor,
-                            calendarHeaderTitleColor: this.settings.calendarSettings.calendarHeaderTitleColor,
-                            weekDayLabelsColor: this.settings.calendarSettings.weekDayLabelsColor,
-                            dayLabelsColor: this.settings.calendarSettings.dayLabelsColor
-                        },
-                        validValues: {
-                            cellSize: {
-                                numberRange: {
-                                    min: 20,
-                                    max: 60
-                                }
-                            },
-                            numOfMonths: {
-                                numberRange: {
-                                    min: 1,
-                                    max: 60
-                                }
-                            }
-                        },
-                        selector: null
-                    });
-                } else {
-                    objectEnumeration.push({
-                        objectName: objectName,
-                        displayName: "Calendar",
-                        properties: {
-                            calendarType: this.settings.calendarSettings.calendarType,
-                            numOfPreviousMonths: this.settings.calendarSettings.numOfPreviousMonths,
-                            numOfFollowingMonths: this.settings.calendarSettings.numOfFollowingMonths,
-                            firstDay: this.settings.calendarSettings.firstDay,
-                            cellSize: this.settings.calendarSettings.cellSize,
-                            cellBorderColor: this.settings.calendarSettings.cellBorderColor,
-                            calendarHeaderColor: this.settings.calendarSettings.calendarHeaderColor,
-                            calendarHeaderTitleColor: this.settings.calendarSettings.calendarHeaderTitleColor,
-                            weekDayLabelsColor: this.settings.calendarSettings.weekDayLabelsColor,
-                            dayLabelsColor: this.settings.calendarSettings.dayLabelsColor
-                        },
-                        validValues: {
-                            cellSize: {
-                                numberRange: {
-                                    min: 20,
-                                    max: 60
-                                }
-                            },
-                            numOfPreviousMonths: {
-                                numberRange: {
-                                    min: 0,
-                                    max: 60
-                                }
-                            },
-                            numOfFollowingMonths: {
-                                numberRange: {
-                                    min: 1,
-                                    max: 60
-                                }
-                            }
-                        },
-                        selector: null
-                    });
-                }
+                objectEnumeration = this.getCalendarSettings(objectName);
                 break;
         }
         return objectEnumeration;
+    }
+
+    private getMetricsSettings(objectName) {
+        const metricSettings = [];
+        for (const metric of this.calendarMetrics.metrics) {
+            metricSettings.push({
+                objectName: objectName,
+                displayName: metric.name,
+                properties: {
+                    metricColor: {solid: {color: metric.color}}
+                },
+                selector: ColorHelper.normalizeSelector((<ISelectionId>metric.selectionId).getSelector())
+            });
+        }
+
+        return metricSettings;
+    }
+
+    private getLegendSettings(objectName) {
+        const legendSettings = [];
+        legendSettings.push({
+            objectName: objectName,
+            displayName: "Legend",
+            properties: {
+                show: this.settings.legendSettings.show,
+                legendLabelColor: this.settings.legendSettings.legendLabelColor,
+                legendLabelFontSize: this.settings.legendSettings.legendLabelFontSize,
+                legendTitleShow: this.settings.legendSettings.legendTitleShow,
+                legendTitleName: this.settings.legendSettings.legendTitleName
+            },
+            validValues: {
+                legendLabelFontSize: {
+                    numberRange: {
+                        min: 4,
+                        max: 30
+                    }
+                }
+            },
+            selector: null
+        });
+
+        return legendSettings;
+    }
+
+    private getCalendarSettings(objectName) {
+        const calendarSettings = [];
+        if (this.settings.calendarSettings.calendarType === 0) {
+            calendarSettings.push({
+                objectName: objectName,
+                displayName: "Calendar",
+                properties: {
+                    calendarType: this.settings.calendarSettings.calendarType,
+                    startDate: this.settings.calendarSettings.startDate,
+                    numOfMonths: this.settings.calendarSettings.numOfMonths,
+                    firstDay: this.settings.calendarSettings.firstDay,
+                    cellSize: this.settings.calendarSettings.cellSize,
+                    cellBorderColor: this.settings.calendarSettings.cellBorderColor,
+                    calendarHeaderColor: this.settings.calendarSettings.calendarHeaderColor,
+                    calendarHeaderTitleColor: this.settings.calendarSettings.calendarHeaderTitleColor,
+                    weekDayLabelsColor: this.settings.calendarSettings.weekDayLabelsColor,
+                    dayLabelsColor: this.settings.calendarSettings.dayLabelsColor
+                },
+                validValues: {
+                    cellSize: {
+                        numberRange: {
+                            min: 20,
+                            max: 60
+                        }
+                    },
+                    numOfMonths: {
+                        numberRange: {
+                            min: 1,
+                            max: 60
+                        }
+                    }
+                },
+                selector: null
+            });
+        } else {
+            calendarSettings.push({
+                objectName: objectName,
+                displayName: "Calendar",
+                properties: {
+                    calendarType: this.settings.calendarSettings.calendarType,
+                    numOfPreviousMonths: this.settings.calendarSettings.numOfPreviousMonths,
+                    numOfFollowingMonths: this.settings.calendarSettings.numOfFollowingMonths,
+                    firstDay: this.settings.calendarSettings.firstDay,
+                    cellSize: this.settings.calendarSettings.cellSize,
+                    cellBorderColor: this.settings.calendarSettings.cellBorderColor,
+                    calendarHeaderColor: this.settings.calendarSettings.calendarHeaderColor,
+                    calendarHeaderTitleColor: this.settings.calendarSettings.calendarHeaderTitleColor,
+                    weekDayLabelsColor: this.settings.calendarSettings.weekDayLabelsColor,
+                    dayLabelsColor: this.settings.calendarSettings.dayLabelsColor
+                },
+                validValues: {
+                    cellSize: {
+                        numberRange: {
+                            min: 20,
+                            max: 60
+                        }
+                    },
+                    numOfPreviousMonths: {
+                        numberRange: {
+                            min: 0,
+                            max: 60
+                        }
+                    },
+                    numOfFollowingMonths: {
+                        numberRange: {
+                            min: 1,
+                            max: 60
+                        }
+                    }
+                },
+                selector: null
+            });
+        }
+
+        return calendarSettings;
     }
 }

@@ -1,6 +1,6 @@
 {
   "name": "powerbi-visuals-calendarvisual",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Customize how you visualize day-to-day data with this easy to use Custom Calendar",
   "author": {
     "name": "Akvelon Inc",
@@ -16,7 +16,7 @@
     "start": "pbiviz start",
     "cert": "pbiviz --create-cert",
     "package": "pbiviz package --resources",
-    "lint": "tslint -r \"node_modules/tslint-microsoft-contrib\"  \"+(src|test)/**/*.ts\""
+    "lint": "tslint -c tslint.json -p tsconfig.json"
   },
   "devDependencies": {
     "@types/d3": "5.7.2",
@@ -24,7 +24,7 @@
     "@types/lodash": "4.14.134",
     "d3": "5.7.0",
     "jquery": "3.4.1",
-    "lodash": "4.17.11",
+    "lodash": "4.17.15",
     "powerbi-models": "1.2.0",
     "powerbi-visuals-api": "2.6.0",
     "powerbi-visuals-tools": "3.1.2",

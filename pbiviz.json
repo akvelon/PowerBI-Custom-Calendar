@@ -4,7 +4,7 @@
     "displayName": "Custom Calendar by Akvelon",
     "guid": "calendarVisual5E37BB8CB2CB427ABE4F9EAAE66C5223",
     "visualClassName": "CustomCalendar",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "description": "Customize how you visualize day-to-day data with this easy to use Custom Calendar",
     "supportUrl": "http://akvelon.com/feedback",
     "gitHubUrl": "https://github.com/akvelon/PowerBI-Custom-Calendar"
@@ -17,7 +17,7 @@
   "assets": {
     "icon": "assets/icon.png"
   },
-  "style": "style/customCalendar.less",
+  "style": "style/visual.less",
   "capabilities": "capabilities.json",
   "stringResources": []
 }
